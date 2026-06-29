@@ -1,7 +1,5 @@
 class Api::V1::PricingController < ApplicationController
-  VALID_PERIODS = %w[Summer Autumn Winter Spring].freeze
-  VALID_HOTELS = %w[FloatingPointResort GitawayHotel RecursionRetreat].freeze
-  VALID_ROOMS = %w[SingletonRoom BooleanTwin RestfulKing].freeze
+  include PricingConstants
 
   before_action :validate_params
 
@@ -14,6 +12,8 @@ class Api::V1::PricingController < ApplicationController
     service.run
     if service.valid?
       render json: { rate: service.result }
+    elsif service.upstream_error?
+      render json: { error: service.errors.join(', ') }, status: :bad_gateway
     else
       render json: { error: service.errors.join(', ') }, status: :bad_request
     end
@@ -22,12 +22,10 @@ class Api::V1::PricingController < ApplicationController
   private
 
   def validate_params
-    # Validate required parameters
     unless params[:period].present? && params[:hotel].present? && params[:room].present?
       return render json: { error: "Missing required parameters: period, hotel, room" }, status: :bad_request
     end
 
-    # Validate parameter values
     unless VALID_PERIODS.include?(params[:period])
       return render json: { error: "Invalid period. Must be one of: #{VALID_PERIODS.join(', ')}" }, status: :bad_request
     end
