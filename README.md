@@ -168,8 +168,41 @@ test/
   lib/rate_api_client_test.rb                # client unit tests
 
 audits/
-  architecture-analysis.md                   # pre-implementation findings report
+  design-patterns.md                         # design pattern usage evaluation
+  error-handling.md                          # error handling findings and remediation
 ```
+
+---
+
+## AI Assistance
+
+### Tool
+
+[Claude Code](https://claude.ai/code) (Anthropic) — an AI-powered CLI that operates directly in the terminal with access to the file system and shell. It reads, writes, and edits source files; runs commands; and reasons over the full project context in a single session.
+
+### Workflow
+
+The workflow followed a consistent audit-then-implement loop:
+
+1. **Read the codebase** — Claude Code read every source file to build a complete picture of the existing implementation before making any suggestions.
+2. **Produce structured audits** — findings were written to `audits/` as markdown reports with importance scores and concrete remediation snippets, rather than making changes immediately. This kept the reasoning visible and reviewable before any code was touched.
+3. **Implement specific findings** — after reviewing each audit, selected findings were implemented as targeted, minimal changes. No speculative refactoring was done beyond what the finding required.
+4. **Write tests alongside the fix** — every code change was accompanied by tests that directly exercised the new behaviour.
+5. **Commit with descriptive messages** — each commit captures the full scope of a change and references the finding it addresses.
+
+### What was AI-assisted
+
+| Area | What was done |
+|------|---------------|
+| **Audit: design patterns** | Evaluated all four pattern categories (creational, structural, behavioural, domain) across the codebase; produced `audits/design-patterns.md` with six findings and drop-in fix snippets |
+| **Audit: error handling** | Mapped every error category (400–503) against what was actually handled; produced `audits/error-handling.md` with eleven findings ordered by importance |
+| **EH-02 — network exception handling** | Added `NETWORK_ERRORS` constant and `rescue` clauses to `RateApiClient#get_rate` so network-level failures (`Net::OpenTimeout`, `SocketError`, etc.) and malformed JSON are caught and returned as `Result` objects instead of raising unhandled exceptions |
+| **EH-01 — correct HTTP status for upstream failures** | Added `upstream_error?` flag and `add_upstream_error` to `BaseService`; updated `PricingService` to use it; updated `PricingController` to return `502 Bad Gateway` for upstream failures instead of `400 Bad Request` |
+| **Test coverage** | Added parameterised network-error tests for every class in `NETWORK_ERRORS`, a malformed-JSON test, an `upstream_error?` assertion in the service test, and two new controller tests asserting 502 behaviour |
+
+### What was written by hand
+
+The core implementation — Redis caching strategy, `RateApiClient` / `PricingService` / `BaseService` architecture, `Result` struct, cache key design, `read`+`write` over `fetch`, environment variable configuration, Docker setup, and the original test suite — was written independently before AI assistance was used.
 
 ---
 
