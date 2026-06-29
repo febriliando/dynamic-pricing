@@ -144,7 +144,7 @@ The upstream pricing model is described as computationally expensive. Without a 
 
 ### Error Handling Strategy
 
-- **Upstream timeout/error**: `RateApiClient` returns `Result.new(success: false, error: ...)`. The service adds the error to `errors`, nothing is cached, the controller responds with `400` and a descriptive message.
+- **Upstream timeout/error**: `RateApiClient` returns `Result.new(success: false, error: ...)`. The service adds the error to `errors`, nothing is cached, the controller responds with `502 Bad Gateway` and a descriptive message.
 - **Rate not found in response**: Treated the same as an API error — not cached, user can retry.
 - **Redis unavailable**: The `error_handler` in the cache config logs the failure and allows the request to continue. The app degrades gracefully by hitting the upstream API directly on every request rather than crashing.
 
