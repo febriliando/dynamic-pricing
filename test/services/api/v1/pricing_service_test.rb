@@ -8,7 +8,6 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
     Rails.cache.clear
   end
 
-  # --- cache miss: fetches from API ---
 
   test "calls API and returns rate on cache miss" do
     client = mock_client(success: true, value: "15000")
@@ -20,7 +19,6 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
     assert_equal "15000", service.result
   end
 
-  # --- cache hit: skips API ---
 
   test "returns cached rate without calling API on cache hit" do
     Rails.cache.write(CACHE_KEY, "15000", raw: true)
@@ -35,7 +33,6 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
     client.verify
   end
 
-  # --- error is not cached ---
 
   test "does not cache rate when API returns error" do
     client = mock_client(success: false, error: "Service unavailable")
@@ -44,6 +41,7 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
     service.run
 
     assert_not service.valid?
+    assert service.upstream_error?
     assert_includes service.errors, "Service unavailable"
     assert_nil Rails.cache.read(CACHE_KEY, raw: true)
   end
@@ -60,7 +58,6 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
     assert_equal "15000", service.result
   end
 
-  # --- type consistency ---
 
   test "returns rate as string on cache miss" do
     client = mock_client(success: true, value: 15000)
@@ -81,7 +78,6 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
     assert_instance_of String, service.result
   end
 
-  # --- cache write ---
 
   test "writes rate to cache after successful API call" do
     client = mock_client(success: true, value: "15000")

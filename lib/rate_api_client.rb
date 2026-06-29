@@ -9,6 +9,11 @@ class RateApiClient
     def success? = success
   end
 
+  NETWORK_ERRORS = [
+    Net::OpenTimeout, Net::ReadTimeout,
+    SocketError, Errno::ECONNREFUSED, EOFError
+  ].freeze
+
   def self.get_rate(period:, hotel:, room:)
     response = post("/pricing", body: build_body(period, hotel, room))
 
@@ -26,6 +31,10 @@ class RateApiClient
     else
       Result.new(success: false, error: 'Rate not found for the given parameters')
     end
+  rescue *NETWORK_ERRORS => e
+    Result.new(success: false, error: "Upstream unreachable: #{e.class}")
+  rescue JSON::ParserError
+    Result.new(success: false, error: 'Upstream returned malformed response')
   end
 
   private_class_method def self.build_body(period, hotel, room)

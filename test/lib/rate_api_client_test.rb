@@ -5,7 +5,6 @@ class RateApiClientTest < ActiveSupport::TestCase
   HOTEL  = "FloatingPointResort"
   ROOM   = "SingletonRoom"
 
-  # --- Result struct ---
 
   test "Result is successful when success is true" do
     result = RateApiClient::Result.new(success: true, value: "15000")
@@ -21,7 +20,6 @@ class RateApiClientTest < ActiveSupport::TestCase
     assert_equal "Something went wrong", result.error
   end
 
-  # --- get_rate: success ---
 
   test "returns successful Result with rate value on API success" do
     body = {
@@ -55,8 +53,6 @@ class RateApiClientTest < ActiveSupport::TestCase
     end
   end
 
-  # --- get_rate: rate not found in response ---
-
   test "returns failure Result when rate is not found in response" do
     body = { "rates" => [] }.to_json
 
@@ -80,8 +76,6 @@ class RateApiClientTest < ActiveSupport::TestCase
     end
   end
 
-  # --- get_rate: API errors ---
-
   test "returns failure Result with error message when API returns error" do
     error_body = { "error" => "Unauthorized" }.to_json
 
@@ -100,6 +94,29 @@ class RateApiClientTest < ActiveSupport::TestCase
 
       assert_not result.success?
       assert_equal "HTTP 500", result.error
+    end
+  end
+
+  RateApiClient::NETWORK_ERRORS.each do |error_class|
+    test "returns failure Result on #{error_class}" do
+      RateApiClient.stub(:post, ->(*) { raise error_class }) do
+        result = RateApiClient.get_rate(period: PERIOD, hotel: HOTEL, room: ROOM)
+
+        assert_not result.success?
+        assert_match(/Upstream unreachable/, result.error)
+        assert_nil result.value
+      end
+    end
+  end
+
+  test "returns failure Result when upstream returns malformed JSON" do
+    response = OpenStruct.new(success?: true, body: "not-json", parsed_response: nil, code: 200)
+
+    RateApiClient.stub(:post, response) do
+      result = RateApiClient.get_rate(period: PERIOD, hotel: HOTEL, room: ROOM)
+
+      assert_not result.success?
+      assert_equal "Upstream returned malformed response", result.error
     end
   end
 

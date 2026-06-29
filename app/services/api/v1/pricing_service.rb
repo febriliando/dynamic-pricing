@@ -18,7 +18,7 @@ module Api::V1
         @result = result.value.to_s
         Rails.cache.write(cache_key, @result, expires_in: CACHE_TTL, raw: true)
       else
-        errors << result.error
+        add_upstream_error(result.error)
       end
     end
 

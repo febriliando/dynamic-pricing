@@ -12,6 +12,8 @@ class Api::V1::PricingController < ApplicationController
     service.run
     if service.valid?
       render json: { rate: service.result }
+    elsif service.upstream_error?
+      render json: { error: service.errors.join(', ') }, status: :bad_gateway
     else
       render json: { error: service.errors.join(', ') }, status: :bad_request
     end

@@ -5,8 +5,6 @@ class Api::V1::PricingControllerTest < ActionDispatch::IntegrationTest
     Rails.cache.clear
   end
 
-  # --- success ---
-
   test "should get pricing with all parameters" do
     mock_result = RateApiClient::Result.new(success: true, value: "15000")
 
@@ -23,9 +21,7 @@ class Api::V1::PricingControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # --- upstream errors ---
-
-  test "should return error when rate API fails" do
+  test "should return 502 when rate API fails" do
     mock_result = RateApiClient::Result.new(success: false, error: "Rate not found")
 
     RateApiClient.stub(:get_rate, mock_result) do
@@ -35,12 +31,26 @@ class Api::V1::PricingControllerTest < ActionDispatch::IntegrationTest
         room: "SingletonRoom"
       }
 
-      assert_response :bad_request
+      assert_response :bad_gateway
       assert_includes JSON.parse(@response.body)["error"], "Rate not found"
     end
   end
 
-  # --- param validation ---
+  test "should return 502 when upstream is unreachable" do
+    mock_result = RateApiClient::Result.new(success: false, error: "Upstream unreachable: Net::OpenTimeout")
+
+    RateApiClient.stub(:get_rate, mock_result) do
+      get api_v1_pricing_url, params: {
+        period: "Summer",
+        hotel: "FloatingPointResort",
+        room: "SingletonRoom"
+      }
+
+      assert_response :bad_gateway
+      assert_includes JSON.parse(@response.body)["error"], "unreachable"
+    end
+  end
+
 
   test "should return error without any parameters" do
     get api_v1_pricing_url
